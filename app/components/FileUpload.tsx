@@ -8,9 +8,16 @@ import {
     upload,
 } from "@imagekit/next";
 import { useRef, useState } from "react";
+import { ImageVariant } from "@/models/Product";
+
+type FileUploadProps = {
+    name: string;
+    description: string;
+    variants: ImageVariant[];
+}
 
 // UploadExample component demonstrates file uploading using ImageKit's Next.js SDK.
-const UploadExample = () => {
+const UploadExample = ({name, description, variants}: FileUploadProps) => {
     // State to keep track of the current upload progress (percentage)
     const [progress, setProgress] = useState(0);
 
@@ -32,12 +39,13 @@ const UploadExample = () => {
     const authenticator = async () => {
         try {
             // Perform the request to the upload authentication endpoint.
-            const response = await fetch("/api/upload-auth");
+            const response = await fetch("/api/imagekit-auth");
             if (!response.ok) {
                 // If the server response is not successful, extract the error text for debugging.
                 const errorText = await response.text();
                 throw new Error(`Request failed with status ${response.status}: ${errorText}`);
             }
+            console.log("This is upload res: ", response);
 
             // Parse and destructure the response JSON for upload credentials.
             const data = await response.json();
@@ -98,7 +106,22 @@ const UploadExample = () => {
                 // Abort signal to allow cancellation of the upload if needed.
                 abortSignal: abortController.signal,
             });
+            const updateDatabase = await fetch("/api/products", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    name: name,
+                    description: description,
+                    imageUrl: uploadResponse.url,
+                    variants: variants,
+                })
+            });
+
             console.log("Upload response:", uploadResponse);
+            console.log("Database update response:", updateDatabase);
+            
         } catch (error) {
             // Handle specific error types provided by the ImageKit SDK.
             if (error instanceof ImageKitAbortError) {
